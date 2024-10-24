@@ -67,13 +67,16 @@ This implementation uses modified versions of OpenZeppelin contracts:
 To deploy PegasysTokenV2 to a local network:
 
 ```bash
-npm run dev:deployment
+npx hardhat node
+yarn run deploy
+yarn run initialize
 ```
 
-For other networks:
+For Rollux:
 
 ```bash
-npm run testnet:deployment # or mainnet:deployment
+yarn run deploy:rollux
+yarn run initialize:rollux
 ```
 
 ## License

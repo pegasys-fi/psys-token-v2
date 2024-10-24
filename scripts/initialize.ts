@@ -1,6 +1,5 @@
 // scripts/initialize.ts
 import { ethers, network, run } from 'hardhat';
-import { ContractFactory } from 'ethers';
 import fs from 'fs';
 
 async function main() {
@@ -15,32 +14,27 @@ async function main() {
     let governanceAddress = process.env.GOVERNANCE_ADDRESS;
 
     console.log('Initializing contracts with the account:', deployer.address);
-    console.log('Account balance:', (await deployer.getBalance()).toString());
+    const balance = await ethers.provider.getBalance(deployer.address);
+    console.log('Account balance:', ethers.formatEther(balance));
 
     // Deploy PegasysToken if not provided
     if (!pegasysTokenAddress) {
         // Deploy MintableERC20 as PegasysToken
-        const MintableERC20Factory: ContractFactory = await ethers.getContractFactory('MintableErc20');
+        const MintableERC20Factory = await ethers.getContractFactory('MintableErc20');
         const mintablePegasysToken = await MintableERC20Factory.deploy('Pegasys', 'PSYS', 18);
-        await mintablePegasysToken.deployed();
-
-        pegasysTokenAddress = mintablePegasysToken.address;
+        await mintablePegasysToken.waitForDeployment();
+        pegasysTokenAddress = await mintablePegasysToken.getAddress();
         console.log('Mintable PegasysToken deployed to:', pegasysTokenAddress);
-    } else {
-        console.log('Using PegasysToken address from environment variable:', pegasysTokenAddress);
     }
 
     // Deploy governance contract if not provided
     if (!governanceAddress) {
         // Deploy MockTransferHook as governance contract
-        const MockTransferHookFactory: ContractFactory = await ethers.getContractFactory('MockTransferHook');
+        const MockTransferHookFactory = await ethers.getContractFactory('MockTransferHook');
         const mockTransferHook = await MockTransferHookFactory.deploy();
-        await mockTransferHook.deployed();
-
-        governanceAddress = mockTransferHook.address;
+        await mockTransferHook.waitForDeployment();
+        governanceAddress = await mockTransferHook.getAddress();
         console.log('MockTransferHook deployed to:', governanceAddress);
-    } else {
-        console.log('Using governance address from environment variable:', governanceAddress);
     }
 
     // Update deployment data with new addresses
@@ -74,9 +68,8 @@ async function main() {
     await tx.wait();
     console.log('Proxy initialized with implementation, admin set to governance, and data');
 
-
     // Verify contracts if not on hardhat network
-    if (network.name == 'rollux') {
+    if (network.name === 'rollux') {
         console.log('Waiting for Blockscout to index the contracts...');
         await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait for 10 seconds
 

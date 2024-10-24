@@ -9,31 +9,32 @@
     "compile": "hardhat compile",
     "deploy": "npx hardhat run scripts/deploy.ts --network localhost",
     "initialize": "npx hardhat run scripts/initialize.ts --network localhost",
-    "deploy:mainnet": "npx hardhat run scripts/deploy.ts --network main",
-    "initialize:mainnet": "npx hardhat run scripts/initialize.ts --network main"
+    "deploy:rollux": "npx hardhat run scripts/deploy.ts --network rollux",
+    "initialize:rollux": "npx hardhat run scripts/initialize.ts --network rollux"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-verify": "^1.1.1",
-    "@nomiclabs/hardhat-ethers": "^2.0.0",
-    "@openzeppelin/contracts": "3.0.1",
-    "@typechain/ethers-v5": "^10.2.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^1.0.0",
+    "@typechain/ethers-v6": "^0.4.0",
     "@typechain/hardhat": "^6.1.5",
-    "@types/bn.js": "^5.1.6",
-    "@types/chai": "^5.0.0",
-    "@types/jest": "^29.5.14",
-    "@types/mocha": "^10.0.9",
-    "@types/node": "^22.7.9",
-    "bn.js": "^5.2.1",
-    "chai": "4.3.7",
-    "chai-bn": "^0.3.1",
-    "dotenv": "^16.4.5",
-    "ethereum-waffle": "^4.0.10",
-    "ethers": "^5.7.2",
-    "hardhat": "^2.12.0",
-    "ts-node": "^10.9.2",
-    "typechain": "^8.3.2",
-    "typescript": "^5.6.3"
+    "@types/chai": "^4.3.4",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "^18.17.19",
+    "chai": "^4.3.7",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.6.0",
+    "hardhat": "^2.17.0",
+    "hardhat-gas-reporter": "^1.0.8",
+    "solidity-coverage": "^0.8.1",
+    "ts-node": "^10.9.1",
+    "typechain": "^8.2.0",
+    "typescript": "^5.2.2"
   },
   "author": "Pegasys Finance, Modified from Aave",
-  "license": "AGPL-3.0-only"
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "@typechain/ethers-v5": "^11.1.2"
+  }
 }

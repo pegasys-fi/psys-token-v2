@@ -1,13 +1,14 @@
-require('@nomicfoundation/hardhat-verify');
-require('@nomiclabs/hardhat-ethers');
-require('@typechain/hardhat');
-const { config: dotenvConfig } = require('dotenv');
+import { HardhatUserConfig } from 'hardhat/config';
+import '@nomicfoundation/hardhat-toolbox';
+import { config as dotenvConfig } from 'dotenv';
+import testWallets from './test-wallets';
+
 dotenvConfig();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '0xc5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122';
 const ROLLUX_RPC = 'https://rpc.rollux.com';
 
-module.exports = {
+const config: HardhatUserConfig = {
   solidity: {
     version: '0.7.5',
     settings: {
@@ -20,16 +21,13 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 570,
-      forking: {
-        url: ROLLUX_RPC,
-        enabled: true,
-      },
-      accounts: [
-        {
-          privateKey: PRIVATE_KEY,
-          balance: '1000000000000000000000',
-        },
-      ],
+      gas: 12000000,
+      blockGasLimit: 12000000,
+      allowUnlimitedContractSize: true,
+      accounts: testWallets.accounts.map((account) => ({
+        privateKey: account.secretKey,
+        balance: account.balance,
+      })),
     },
     rollux: {
       chainId: 570,
@@ -49,12 +47,10 @@ module.exports = {
         url: ROLLUX_RPC,
         enabled: true,
       },
-    }
+    },
   },
   etherscan: {
-    apiKey: {
-      rollux: process.env.BLOCKSCOUT_KEY || 'abc',
-    },
+    apiKey: 'abc',
     customChains: [
       {
         network: 'rollux',
@@ -70,3 +66,5 @@ module.exports = {
     timeout: 0,
   },
 };
+
+export default config;

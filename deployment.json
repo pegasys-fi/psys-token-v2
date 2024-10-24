@@ -1,7 +1,7 @@
 {
-  "network": "localhost",
-  "implementationAddress": "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF",
-  "proxyAddress": "0x22474D350EC2dA53D717E30b96e9a2B7628Ede5b",
-  "pegasysTokenAddress": "0x52686d31B29D192a03709fC341F63D1f2F9F194c",
-  "governanceAddress": "0x5f5e46D58180d86d784eca79d6C628F13abd9f80"
+  "network": "rollux",
+  "implementationAddress": "0x4e165918c365ee65D57d3E6E49f5Fa84e0Ed1E4E",
+  "proxyAddress": "0xe2dA6476fFC9ec5E7EE9E7A361F933f6DbE8648c",
+  "pegasysTokenAddress": "0x52B24639134e50a0a84734A7B0E960a524F66e93",
+  "governanceAddress": "0xfF3321C54aDF9B3a11836178ed2C945c6b33DE15"
 }
