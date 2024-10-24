@@ -7,7 +7,7 @@ node_modules
 dist/
 build/
 .vscode
-
+typechain-types/
 types/
 coverage
 .coverage_artifacts

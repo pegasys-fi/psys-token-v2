@@ -1,36 +1,43 @@
 // SPDX-License-Identifier: agpl-3.0
 pragma solidity 0.7.5;
 
-import {ERC20} from '../open-zeppelin/ERC20.sol';
+import {ERC20, IERC20} from '../open-zeppelin/ERC20.sol';
 import {ITransferHook} from '../interfaces/ITransferHook.sol';
 import {VersionedInitializable} from '../utils/VersionedInitializable.sol';
 import {GovernancePowerDelegationERC20} from './base/GovernancePowerDelegationERC20.sol';
 import {SafeMath} from '../open-zeppelin/SafeMath.sol';
 
 /**
- * @notice implementation of the AAVE token contract
- * @author Aave
+ * @notice implementation of the PegasysV2 token contract with governance power delegation
+ * @author Modified from Aave
  */
-contract AaveTokenV2 is GovernancePowerDelegationERC20, VersionedInitializable {
+contract PegasysTokenV2 is GovernancePowerDelegationERC20, VersionedInitializable {
   using SafeMath for uint256;
 
-  string internal constant NAME = 'Aave Token';
-  string internal constant SYMBOL = 'AAVE';
+  string internal constant NAME = 'Pegasys';
+  string internal constant SYMBOL = 'PSYS';
   uint8 internal constant DECIMALS = 18;
 
-  uint256 public constant REVISION = 2;
+  uint256 public constant REVISION = 1;
 
   /// @dev owner => next valid nonce to submit with permit()
   mapping(address => uint256) public _nonces;
 
   mapping(address => mapping(uint256 => Snapshot)) public _votingSnapshots;
-
   mapping(address => uint256) public _votingSnapshotsCounts;
 
-  /// @dev reference to the Aave governance contract to call (if initialized) on _beforeTokenTransfer
-  /// !!! IMPORTANT The Aave governance is considered a trustable contract, being its responsibility
-  /// to control all potential reentrancies by calling back the AaveToken
-  ITransferHook public _aaveGovernance;
+  mapping(address => address) internal _votingDelegates;
+
+  mapping(address => mapping(uint256 => Snapshot)) internal _propositionPowerSnapshots;
+  mapping(address => uint256) internal _propositionPowerSnapshotsCounts;
+
+  mapping(address => address) internal _propositionPowerDelegates;
+
+  /// @dev governance contract that can receive hooks on token transfers
+  ITransferHook public _pegasysGovernance;
+  
+  /// @dev reference to the Pegasys token contract
+  IERC20 public PEGASYS_TOKEN;
 
   bytes32 public DOMAIN_SEPARATOR;
   bytes public constant EIP712_REVISION = bytes('1');
@@ -41,19 +48,76 @@ contract AaveTokenV2 is GovernancePowerDelegationERC20, VersionedInitializable {
     'Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)'
   );
 
-  mapping(address => address) internal _votingDelegates;
-
-  mapping(address => mapping(uint256 => Snapshot)) internal _propositionPowerSnapshots;
-  mapping(address => uint256) internal _propositionPowerSnapshotsCounts;
-
-  mapping(address => address) internal _propositionPowerDelegates;
+  event Deposit(address indexed user, uint256 amount);
+  event Withdraw(address indexed user, uint256 amount);
 
   constructor() public ERC20(NAME, SYMBOL) {}
 
   /**
    * @dev initializes the contract upon assignment to the InitializableAdminUpgradeabilityProxy
+   * @param pegasysToken the address of the existing Pegasys token
+   * @param governance the address of the governance contract
    */
-  function initialize() external initializer {}
+  function initialize(
+    IERC20 pegasysToken,
+    ITransferHook governance
+  ) external initializer {
+    uint256 chainId;
+
+    assembly {
+      chainId := chainid()
+    }
+
+    DOMAIN_SEPARATOR = keccak256(
+      abi.encode(
+        EIP712_DOMAIN,
+        keccak256(bytes(NAME)),
+        keccak256(EIP712_REVISION),
+        chainId,
+        address(this)
+      )
+    );
+
+    _name = NAME;
+    _symbol = SYMBOL;
+    _setupDecimals(DECIMALS);
+    
+    PEGASYS_TOKEN = pegasysToken;
+    _pegasysGovernance = governance;
+  }
+
+  /**
+   * @dev Deposit Pegasys tokens and mint PSYSv2 tokens
+   * @param amount Amount of Pegasys tokens to deposit
+   */
+  function deposit(uint256 amount) external {
+    require(amount > 0, 'INVALID_AMOUNT');
+    
+    // Transfer Pegasys tokens from user to this contract
+    require(PEGASYS_TOKEN.transferFrom(msg.sender, address(this), amount), 'TRANSFER_FAILED');
+    
+    // Mint equivalent amount of PSYSv2 tokens
+    _mint(msg.sender, amount);
+    
+    emit Deposit(msg.sender, amount);
+  }
+
+  /**
+   * @dev Burn PSYSv2 tokens and withdraw Pegasys tokens
+   * @param amount Amount of PSYSv2 tokens to burn and withdraw
+   */
+  function withdraw(uint256 amount) external {
+    require(amount > 0, 'INVALID_AMOUNT');
+    require(balanceOf(msg.sender) >= amount, 'INSUFFICIENT_BALANCE');
+    
+    // Burn PSYSv2 tokens first
+    _burn(msg.sender, amount);
+    
+    // Transfer Pegasys tokens back to user
+    require(PEGASYS_TOKEN.transfer(msg.sender, amount), 'TRANSFER_FAILED');
+    
+    emit Withdraw(msg.sender, amount);
+  }
 
   /**
    * @dev implements the permit function as for https://github.com/ethereum/EIPs/blob/8a34d644aacf0f9f8f00815307fd7dd5da07655f/EIPS/eip-2612.md
@@ -65,7 +129,6 @@ contract AaveTokenV2 is GovernancePowerDelegationERC20, VersionedInitializable {
    * @param s signature param
    * @param r signature param
    */
-
   function permit(
     address owner,
     address spender,
@@ -76,7 +139,6 @@ contract AaveTokenV2 is GovernancePowerDelegationERC20, VersionedInitializable {
     bytes32 s
   ) external {
     require(owner != address(0), 'INVALID_OWNER');
-    //solium-disable-next-line
     require(block.timestamp <= deadline, 'INVALID_EXPIRATION');
     uint256 currentValidNonce = _nonces[owner];
     bytes32 digest = keccak256(
@@ -133,10 +195,10 @@ contract AaveTokenV2 is GovernancePowerDelegationERC20, VersionedInitializable {
       DelegationType.PROPOSITION_POWER
     );
 
-    // caching the aave governance address to avoid multiple state loads
-    ITransferHook aaveGovernance = _aaveGovernance;
-    if (aaveGovernance != ITransferHook(0)) {
-      aaveGovernance.onTransfer(from, to, amount);
+    // caching the governance address to avoid multiple state loads
+    ITransferHook governance = _pegasysGovernance;
+    if (governance != ITransferHook(0)) {
+      governance.onTransfer(from, to, amount);
     }
   }
 

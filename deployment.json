@@ -1,0 +1,7 @@
+{
+  "network": "localhost",
+  "implementationAddress": "0xa4bcDF64Cdd5451b6ac3743B414124A6299B65FF",
+  "proxyAddress": "0x22474D350EC2dA53D717E30b96e9a2B7628Ede5b",
+  "pegasysTokenAddress": "0x52686d31B29D192a03709fC341F63D1f2F9F194c",
+  "governanceAddress": "0x5f5e46D58180d86d784eca79d6C628F13abd9f80"
+}
