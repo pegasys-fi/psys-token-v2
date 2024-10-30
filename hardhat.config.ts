@@ -42,7 +42,7 @@ const config: HardhatUserConfig = {
     localhost: {
       url: 'http://127.0.0.1:8545',
       chainId: 570, // Same as your forked network
-      accounts: [PRIVATE_KEY],
+      // accounts: [PRIVATE_KEY],
       forking: {
         url: ROLLUX_RPC,
         enabled: true,

@@ -4,6 +4,7 @@ import fs from 'fs';
 
 async function main() {
     const [deployer] = await ethers.getSigners();
+    const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
     // Read deployed addresses from the file
     const data = JSON.parse(fs.readFileSync('deployment.json', 'utf8'));
@@ -11,7 +12,6 @@ async function main() {
     const pegasysTokenV2Address = data.implementationAddress;
     const proxyAddress = data.proxyAddress;
     let pegasysTokenAddress = process.env.PEGASYS_ADDRESS;
-    let governanceAddress = process.env.GOVERNANCE_ADDRESS;
 
     console.log('Initializing contracts with the account:', deployer.address);
     const balance = await ethers.provider.getBalance(deployer.address);
@@ -27,27 +27,14 @@ async function main() {
         console.log('Mintable PegasysToken deployed to:', pegasysTokenAddress);
     }
 
-    // Deploy governance contract if not provided
-    if (!governanceAddress) {
-        // Deploy MockTransferHook as governance contract
-        const MockTransferHookFactory = await ethers.getContractFactory('MockTransferHook');
-        const mockTransferHook = await MockTransferHookFactory.deploy();
-        await mockTransferHook.waitForDeployment();
-        governanceAddress = await mockTransferHook.getAddress();
-        console.log('MockTransferHook deployed to:', governanceAddress);
-    }
-
     // Update deployment data with new addresses
     data.pegasysTokenAddress = pegasysTokenAddress;
-    data.governanceAddress = governanceAddress;
-
     fs.writeFileSync('deployment.json', JSON.stringify(data, null, 2));
 
     console.log('Using the following addresses:');
     console.log('PegasysTokenV2 implementation:', pegasysTokenV2Address);
     console.log('Proxy:', proxyAddress);
     console.log('PegasysToken:', pegasysTokenAddress);
-    console.log('Governance:', governanceAddress);
 
     // Get the contracts
     const pegasysTokenV2 = await ethers.getContractAt('PegasysTokenV2', pegasysTokenV2Address);
@@ -56,13 +43,13 @@ async function main() {
     // Prepare initialization data
     const initializeData = pegasysTokenV2.interface.encodeFunctionData('initialize', [
         pegasysTokenAddress,
-        governanceAddress,
+        ZERO_ADDRESS,
     ]);
 
     // Initialize the proxy with implementation address, admin, and initialization data
     const tx = await proxy['initialize(address,address,bytes)'](
         pegasysTokenV2Address,
-        governanceAddress,
+        deployer.address,
         initializeData
     );
     await tx.wait();
@@ -79,14 +66,6 @@ async function main() {
                 await run('verify:verify', {
                     address: pegasysTokenAddress,
                     constructorArguments: ['Pegasys', 'PSYS', 18],
-                });
-            }
-
-            if (!process.env.GOVERNANCE_ADDRESS) {
-                console.log('Verifying MockTransferHook...');
-                await run('verify:verify', {
-                    address: governanceAddress,
-                    constructorArguments: [],
                 });
             }
         } catch (error) {
